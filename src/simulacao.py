@@ -166,3 +166,43 @@ def main() -> None:
         )
 
     exibir_estatisticas()
+
+def exibir_estatisticas() -> None:
+    with conectar() as conn:
+        print("=-=-=- Estatísticas da Competição -=-=-=\n")
+
+        # Top 5 artilheiros
+        rows = conn.execute("""
+            SELECT equipe, SUM(gols) AS total
+            FROM (
+                SELECT equipe_a AS equipe, gols_a AS gols FROM partidas
+                UNION ALL
+                SELECT equipe_b AS equipe, gols_b AS gols FROM partidas
+            )
+            GROUP BY equipe ORDER BY total DESC LIMIT 5
+        """).fetchall()
+        print("Top 5 artilheiras:")
+        for nome, total in rows:
+            print(f"  {nome:<22} {total:>3} gol(s)")
+
+        # Melhor defesa
+        row = conn.execute("""
+            SELECT equipe, SUM(gols_sofridos) AS total
+            FROM (
+                SELECT equipe_a AS equipe, gols_b AS gols_sofridos FROM partidas
+                UNION ALL
+                SELECT equipe_b AS equipe, gols_a AS gols_sofridos FROM partidas
+            )
+            GROUP BY equipe ORDER BY total ASC LIMIT 1
+        """).fetchone()
+        print(f"\nMelhor defesa: {row[0]} ({row[1]} gol(s) sofrido(s))")
+
+        # Partidas por fase
+        rows = conn.execute("""
+            SELECT f.nome, COUNT(*) AS qtd
+            FROM partidas p JOIN fases f ON p.fase_id = f.id
+            GROUP BY f.nome ORDER BY f.id
+        """).fetchall()
+        print("\nPartidas por fase:")
+        for fase, qtd in rows:
+            print(f"  {fase:<25} {qtd:>2} partida(s)")
