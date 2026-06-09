@@ -63,3 +63,25 @@ def registrar_partida(
             (fase_id, equipe_a, equipe_b, gols_a, gols_b,
              pen_a, pen_b, vencedor),
         )
+
+def simular_placar() -> tuple[int, int]:
+    """
+    Gera um placar aleatorio realista.
+    A maioria das partidas termina com poucos gols (media de 2,7 por jogo).
+    Em caso de empate, vai para penaltis (5x4 ou 4x3, etc.).
+    """
+    gols_a = random.choices(range(6), weights=[20, 35, 25, 12, 5, 3])[0]
+    gols_b = random.choices(range(6), weights=[20, 35, 25, 12, 5, 3])[0]
+    return gols_a, gols_b
+
+def resolver_empate(equipe_a: str, equipe_b: str) -> tuple[str, int, int]:
+    """
+    Resolve partidas empatadas via penaltis.
+    Retorna (vencedor, gols_penaltis_a, gols_penaltis_b).
+    """
+    while True:
+        pen_a = random.randint(3, 5)
+        pen_b = random.randint(3, 5)
+        if pen_a != pen_b:
+            vencedor = equipe_a if pen_a > pen_b else equipe_b
+            return vencedor, pen_a, pen_b
