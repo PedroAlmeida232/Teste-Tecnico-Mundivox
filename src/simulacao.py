@@ -1,49 +1,57 @@
 import random
-import sqlite3
 import os
 from typing import Optional
+import psycopg2
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "copa2026.db")
-
-def conectar() -> sqlite3.Connection:
-    return sqlite3.connect(DB_PATH)
+def conectar() -> psycopg2.extensions.connection:
+    return psycopg2.connect(
+        host=os.environ.get("PGHOST", "localhost"),
+        port=int(os.environ.get("PGPORT", 5432)),
+        dbname=os.environ.get("PGDATABASE", "copa2026"),
+        user=os.environ.get("PGUSER", "postgres"),
+        password=os.environ.get("PGPASSWORD", ""),
+    )
 
 def inicializar_banco() -> None:
     """Cria as tabelas caso ainda nao existam."""
+    schema_path = os.path.join(os.path.dirname(__file__), "..", "sql", "schema.sql")
+    with open(schema_path) as f:
+        schema = f.read()
     with conectar() as conn:
-        conn.executescript(open(os.path.join(os.path.dirname(__file__),
-                                             "..", "sql", "schema.sql")).read())
+        with conn.cursor() as cur:
+            cur.execute(schema)
 
 def limpar_competicao() -> None:
     """Remove todos os dados de uma simulacao anterior."""
     with conectar() as conn:
-        conn.executescript("""
-            DELETE FROM partidas;
-            DELETE FROM equipes;
-            DELETE FROM fases;
-        """)
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM partidas")
+            cur.execute("DELETE FROM equipes")
+            cur.execute("DELETE FROM fases")
 
 def registrar_fase(nome_fase: str) -> int:
     with conectar() as conn:
-        cur = conn.execute(
-            "INSERT INTO fases (nome) VALUES (?)", (nome_fase,)
-        )
-        return cur.lastrowid
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO fases (nome) VALUES (%s) RETURNING id", (nome_fase,)
+            )
+            return cur.fetchone()[0]
 
 def registrar_equipes(equipes: list[str]) -> dict[str, int]:
     ids = {}
     with conectar() as conn:
-        for eq in equipes:
-            cur = conn.execute(
-                "INSERT OR IGNORE INTO equipes (nome) VALUES (?)", (eq,)
-            )
-            if cur.lastrowid:
-                ids[eq] = cur.lastrowid
-            else:
-                row = conn.execute(
-                    "SELECT id FROM equipes WHERE nome = ?", (eq,)
-                ).fetchone()
-                ids[eq] = row[0]
+        with conn.cursor() as cur:
+            for eq in equipes:
+                cur.execute(
+                    "INSERT INTO equipes (nome) VALUES (%s) ON CONFLICT (nome) DO NOTHING RETURNING id",
+                    (eq,)
+                )
+                row = cur.fetchone()
+                if row:
+                    ids[eq] = row[0]
+                else:
+                    cur.execute("SELECT id FROM equipes WHERE nome = %s", (eq,))
+                    ids[eq] = cur.fetchone()[0]
     return ids
 
 def registrar_partida(
@@ -53,16 +61,17 @@ def registrar_partida(
     vencedor: str,
 ) -> None:
     with conectar() as conn:
-        conn.execute(
-            """
-            INSERT INTO partidas
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO partidas
+                    (fase_id, equipe_a, equipe_b, gols_a, gols_b,
+                     penaltis_a, penaltis_b, vencedor)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """,
                 (fase_id, equipe_a, equipe_b, gols_a, gols_b,
-                 penaltis_a, penaltis_b, vencedor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (fase_id, equipe_a, equipe_b, gols_a, gols_b,
-             pen_a, pen_b, vencedor),
-        )
+                 pen_a, pen_b, vencedor),
+            )
 
 def simular_placar() -> tuple[int, int]:
     """
@@ -150,59 +159,73 @@ def main() -> None:
     quartas_confrontos    = montar_confrontos(classificados_oitavas)
     classificados_quartas = disputar_fase(quartas_confrontos, "Quartas de Final")
     semi_confrontos       = montar_confrontos(classificados_quartas)
+    classificados_semi    = disputar_fase(semi_confrontos, "Semifinais")
+
+    # disputa de 3º lugar entre os perdedores das semifinais
+    perdedores_semi = [
+        eq for par in semi_confrontos for eq in par
+        if eq not in classificados_semi
+    ]
+    disputar_fase([(perdedores_semi[0], perdedores_semi[1])], "Disputa de 3\u00ba Lugar")
 
     [campeao] = disputar_fase(
-        [(finalistas_e_perdedores[0], finalistas_e_perdedores[1])],
+        [(classificados_semi[0], classificados_semi[1])],
         "Final"
     )
 
     print(f"\n{'='*50}")
-    print(f"CAMPEÃO DA COPA DO MUNDO 2026: {campeao.upper()}")
+    print(f"CAMPE\u00c3O DA COPA DO MUNDO 2026: {campeao.upper()}")
     print(f"{'='*50}\n")
 
     with conectar() as conn:
-        conn.execute(
-            "UPDATE equipes SET campeao = 1 WHERE nome = ?", (campeao,)
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE equipes SET campeao = 1 WHERE nome = %s", (campeao,)
+            )
 
     exibir_estatisticas()
 
 def exibir_estatisticas() -> None:
     with conectar() as conn:
-        print("=-=-=- Estatísticas da Competição -=-=-=\n")
+        with conn.cursor() as cur:
+            print("=-=-=- Estat\u00edsticas da Competi\u00e7\u00e3o -=-=-=\n")
 
-        # Top 5 artilheiros
-        rows = conn.execute("""
-            SELECT equipe, SUM(gols) AS total
-            FROM (
-                SELECT equipe_a AS equipe, gols_a AS gols FROM partidas
-                UNION ALL
-                SELECT equipe_b AS equipe, gols_b AS gols FROM partidas
-            )
-            GROUP BY equipe ORDER BY total DESC LIMIT 5
-        """).fetchall()
-        print("Top 5 artilheiras:")
-        for nome, total in rows:
-            print(f"  {nome:<22} {total:>3} gol(s)")
+            # Top 5 artilheiros
+            cur.execute("""
+                SELECT equipe, SUM(gols) AS total
+                FROM (
+                    SELECT equipe_a AS equipe, gols_a AS gols FROM partidas
+                    UNION ALL
+                    SELECT equipe_b AS equipe, gols_b AS gols FROM partidas
+                ) sub
+                GROUP BY equipe ORDER BY total DESC LIMIT 5
+            """)
+            print("Top 5 artilheiras:")
+            for nome, total in cur.fetchall():
+                print(f"  {nome:<22} {total:>3} gol(s)")
 
-        # Melhor defesa
-        row = conn.execute("""
-            SELECT equipe, SUM(gols_sofridos) AS total
-            FROM (
-                SELECT equipe_a AS equipe, gols_b AS gols_sofridos FROM partidas
-                UNION ALL
-                SELECT equipe_b AS equipe, gols_a AS gols_sofridos FROM partidas
-            )
-            GROUP BY equipe ORDER BY total ASC LIMIT 1
-        """).fetchone()
-        print(f"\nMelhor defesa: {row[0]} ({row[1]} gol(s) sofrido(s))")
+            # Melhor defesa
+            cur.execute("""
+                SELECT equipe, SUM(gols_sofridos) AS total
+                FROM (
+                    SELECT equipe_a AS equipe, gols_b AS gols_sofridos FROM partidas
+                    UNION ALL
+                    SELECT equipe_b AS equipe, gols_a AS gols_sofridos FROM partidas
+                ) sub
+                GROUP BY equipe ORDER BY total ASC LIMIT 1
+            """)
+            row = cur.fetchone()
+            print(f"\nMelhor defesa: {row[0]} ({row[1]} gol(s) sofrido(s))")
 
-        # Partidas por fase
-        rows = conn.execute("""
-            SELECT f.nome, COUNT(*) AS qtd
-            FROM partidas p JOIN fases f ON p.fase_id = f.id
-            GROUP BY f.nome ORDER BY f.id
-        """).fetchall()
-        print("\nPartidas por fase:")
-        for fase, qtd in rows:
-            print(f"  {fase:<25} {qtd:>2} partida(s)")
+            # Partidas por fase
+            cur.execute("""
+                SELECT f.nome, COUNT(*) AS qtd
+                FROM partidas p JOIN fases f ON p.fase_id = f.id
+                GROUP BY f.nome, f.id ORDER BY f.id
+            """)
+            print("\nPartidas por fase:")
+            for fase, qtd in cur.fetchall():
+                print(f"  {fase:<25} {qtd:>2} partida(s)")
+
+if __name__ == "__main__":
+    main()
