@@ -130,3 +130,39 @@ def montar_confrontos(equipes: list[str]) -> list[tuple[str, str]]:
     Segue a logica da FIFA: 1º x 2º, 3º x 4º, etc.
     """
     return [(equipes[i], equipes[i + 1]) for i in range(0, len(equipes), 2)]
+
+def main() -> None:
+    inicializar_banco()
+    limpar_competicao()
+
+    oitavas_confrontos: list[tuple[str, str]] = [
+        ("Brasil",    "Mexico"),
+        ("Argentina", "Equador"),
+        ("Franca",    "Polonia"),
+        ("Inglaterra","Senegal"),
+        ("Espanha",   "Marrocos"),
+        ("Portugal",  "Suica"),
+        ("Alemanha",  "Japao"),
+        ("Holanda",   "Estados Unidos"),
+    ]
+
+    classificados_oitavas = disputar_fase(oitavas_confrontos, "Oitavas de Final")
+    quartas_confrontos    = montar_confrontos(classificados_oitavas)
+    classificados_quartas = disputar_fase(quartas_confrontos, "Quartas de Final")
+    semi_confrontos       = montar_confrontos(classificados_quartas)
+
+    [campeao] = disputar_fase(
+        [(finalistas_e_perdedores[0], finalistas_e_perdedores[1])],
+        "Final"
+    )
+
+    print(f"\n{'='*50}")
+    print(f"CAMPEÃO DA COPA DO MUNDO 2026: {campeao.upper()}")
+    print(f"{'='*50}\n")
+
+    with conectar() as conn:
+        conn.execute(
+            "UPDATE equipes SET campeao = 1 WHERE nome = ?", (campeao,)
+        )
+
+    exibir_estatisticas()
