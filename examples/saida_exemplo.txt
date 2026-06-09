@@ -1,0 +1,59 @@
+
+==================================================
+  OITAVAS DE FINAL
+==================================================
+  Brasil                        2 x 0                         Mexico  ->   Brasil
+  Argentina                     1 x 2                        Ecuador  ->   Ecuador
+  Franca                        1 x 2                        Polonia  ->   Polonia
+  Inglaterra                    3 x 1                        Senegal  ->   Inglaterra
+  Espanha                       3 x 2                       Marrocos  ->   Espanha
+  Portugal                      1 x 2                          Suica  ->   Suica
+  Alemanha                      3 x 1                          Japao  ->   Alemanha
+  Holanda                       1 x 0                 Estados Unidos  ->   Holanda
+
+==================================================
+  QUARTAS DE FINAL
+==================================================
+  Brasil                  4 x 4 (pên. 5 x 4)                 Ecuador  ->   Brasil
+  Polonia                       3 x 1                     Inglaterra  ->   Polonia
+  Espanha                       0 x 2                          Suica  ->   Suica
+  Alemanha                1 x 1 (pên. 3 x 4)                 Holanda  ->   Holanda
+
+==================================================
+  SEMIFINAIS
+==================================================
+  Brasil                  1 x 1 (pên. 3 x 4)                 Polonia  ->   Polonia
+  Suica                         1 x 0                        Holanda  ->   Holanda
+
+==================================================
+  DISPUTA DE 3º LUGAR
+==================================================
+  Brasil                        0 x 4                        Holanda  ->   Holanda
+
+==================================================
+  FINAL
+==================================================
+  Polonia                       3 x 2                          Suica  ->   Polonia
+
+==================================================
+CAMPEÃO DA COPA DO MUNDO 2026: POLONIA
+==================================================
+
+Estatisticas da Competicao
+
+Top 5 artilheiras:
+  Polonia                  9 gol(s)
+  Suica                    7 gol(s)
+  Brasil                   7 gol(s)
+  Holanda                  6 gol(s)
+  Equador                  6 gol(s)
+
+Melhor defesa: Estados Unidos (1 gol(s) sofrido(s))
+
+Partidas por fase:
+  Oitavas de Final           8 partida(s)
+  Quartas de Final           4 partida(s)
+  Semifinais                 2 partida(s)
+  Disputa de 3º Lugar        1 partida(s)
+  Final                      1 partida(s)
+
