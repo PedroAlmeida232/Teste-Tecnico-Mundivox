@@ -85,3 +85,48 @@ def resolver_empate(equipe_a: str, equipe_b: str) -> tuple[str, int, int]:
         if pen_a != pen_b:
             vencedor = equipe_a if pen_a > pen_b else equipe_b
             return vencedor, pen_a, pen_b
+
+def disputar_fase(
+    confrontos: list[tuple[str, str]], nome_fase: str
+) -> list[str]:
+    """
+    Realiza todos os jogos de uma fase e retorna a lista de classificados.
+    """
+    print(f"\n{'='*50}")
+    print(f"  {nome_fase.upper()}")
+    print(f"{'='*50}")
+
+    fase_id = registrar_fase(nome_fase)
+    todas_equipes = [e for par in confrontos for e in par]
+    registrar_equipes(todas_equipes)
+
+    classificados = []
+    for equipe_a, equipe_b in confrontos:
+        gols_a, gols_b = simular_placar()
+        if gols_a != gols_b:
+            vencedor = equipe_a if gols_a > gols_b else equipe_b
+            pen_a = pen_b = None
+            resultado_str = f"{gols_a} x {gols_b}"
+        else:
+            vencedor, pen_a, pen_b = resolver_empate(equipe_a, equipe_b)
+            resultado_str = (
+                f"{gols_a} x {gols_b} "
+                f"(pên. {pen_a} x {pen_b})"
+            )
+        registrar_partida(
+            fase_id, equipe_a, equipe_b,
+            gols_a, gols_b, pen_a, pen_b, vencedor,
+        )
+        print(
+            f"  {equipe_a:<22} {resultado_str:^20} {equipe_b:>22}"
+            f"  →  ✓ {vencedor}"
+        )
+        classificados.append(vencedor)
+    return classificados
+
+def montar_confrontos(equipes: list[str]) -> list[tuple[str, str]]:
+    """
+    Monta os pares da proxima fase.
+    Segue a logica da FIFA: 1º x 2º, 3º x 4º, etc.
+    """
+    return [(equipes[i], equipes[i + 1]) for i in range(0, len(equipes), 2)]
